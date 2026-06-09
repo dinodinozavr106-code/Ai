@@ -8,7 +8,7 @@ GEMINI_KEY = os.environ.get("GEMINI_KEY")
 
 async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
     body = {"contents": [{"parts": [{"text": user_text}]}]}
     r = requests.post(url, json=body)
     data = r.json()
