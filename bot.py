@@ -86,11 +86,11 @@ async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         }
         r = requests.post(url, headers=headers, json=body)
         data = r.json()
+        
         if "choices" in data:
-            answer = data["choices"][0]["message"]["content"]
-        else:
-            answer = str(data)
-        await update.message.reply_text(answer)
+    answer = data["choices"][0]["message"]["content"]
+else:
+    answer = "⚠️ Что-то пошло не так. Обратитесь в поддержку: @Samir_Yl"
 
 if __name__ == "__main__":
     app = Application.builder().token(TELEGRAM_TOKEN).build()
