@@ -1,34 +1,96 @@
 import os
 import requests
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
+import json
+import re
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GROQ_KEY = os.environ.get("GROQ_KEY")
+
 SYSTEM_PROMPT = "Ты BEK AI — умный помощник в Telegram. Отвечай на том языке на котором пишет пользователь. Никогда не мешай несколько языков в одном ответе."
 
+def create_pptx(slides_data):
+    prs = Presentation()
+    prs.slide_width = Inches(13.33)
+    prs.slide_height = Inches(7.5)
+    for slide in slides_data:
+        layout = prs.slide_layouts[1]
+        s = prs.slides.add_slide(layout)
+        background = s.background
+        fill = background.fill
+        fill.solid()
+        fill.fore_color.rgb = RGBColor(10, 10, 30)
+        title = s.shapes.title
+        body = s.placeholders[1]
+        title.text = slide.get("title", "")
+        title.text_frame.paragraphs[0].font.color.rgb = RGBColor(0, 212, 255)
+        title.text_frame.paragraphs[0].font.size = Pt(36)
+        title.text_frame.paragraphs[0].font.bold = True
+        body.text = slide.get("content", "")
+        body.text_frame.paragraphs[0].font.color.rgb = RGBColor(200, 200, 255)
+        body.text_frame.paragraphs[0].font.size = Pt(20)
+    path = "/tmp/presentation.pptx"
+    prs.save(path)
+    return path
 
 async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Authorization": "Bearer " + GROQ_KEY,
-        "Content-Type": "application/json"
-    }
-    body = {
-        "model": "llama-3.1-8b-instant",
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_text}
-        ]
-    }
-    r = requests.post(url, headers=headers, json=body)
-    data = r.json()
-    if "choices" in data:
-        answer = data["choices"][0]["message"]["content"]
+
+    # Презентация
+    if user_text.lower().startswith("презентация"):
+        topic = user_text[11:].strip() or "тема не указана"
+        await update.message.reply_text("⏳ Создаю презентацию...")
+        prompt = f"""Создай презентацию на тему: {topic}
+Ответь ТОЛЬКО в JSON формате без лишнего текста:
+{{"slides": [{{"title": "...", "content": "..."}}, ...]}}
+Сделай 10 слайдов."""
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {"Authorization": "Bearer " + GROQ_KEY, "Content-Type": "application/json"}
+        body = {"model": "llama-3.1-8b-instant", "messages": [{"role": "user", "content": prompt}]}
+        r = requests.post(url, headers=headers, json=body)
+        data = r.json()
+        text = data["choices"][0]["message"]["content"]
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            slides_data = json.loads(match.group())["slides"]
+            path = create_pptx(slides_data)
+            await update.message.reply_document(document=open(path, "rb"), filename="presentation.pptx")
+        else:
+            await update.message.reply_text("Не смог создать презентацию, попробуй ещё раз.")
+
+    # AI Фото
+    elif user_text.lower().startswith("фото"):
+        prompt = user_text[4:].strip()
+        if not prompt:
+            await update.message.reply_text("Напиши что нарисовать, например: фото закат на море")
+            return
+        await update.message.reply_text("⏳ Генерирую фото...")
+        image_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}?width=512&height=512&nologo=true"
+        img = requests.get(image_url)
+        await update.message.reply_photo(photo=img.content)
+
+    # Обычный чат
     else:
-        answer = str(data)
-    await update.message.reply_text(answer)
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {"Authorization": "Bearer " + GROQ_KEY, "Content-Type": "application/json"}
+        body = {
+            "model": "llama-3.1-8b-instant",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_text}
+            ]
+        }
+        r = requests.post(url, headers=headers, json=body)
+        data = r.json()
+        if "choices" in data:
+            answer = data["choices"][0]["message"]["content"]
+        else:
+            answer = str(data)
+        await update.message.reply_text(answer)
 
 if __name__ == "__main__":
     app = Application.builder().token(TELEGRAM_TOKEN).build()
