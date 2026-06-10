@@ -4,7 +4,7 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, MessageHandler, CommandHandler, filters, ContextTypes
 import json
 import re
 
@@ -36,6 +36,22 @@ def create_pptx(slides_data):
     path = "/tmp/presentation.pptx"
     prs.save(path)
     return path
+
+async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "👋 Привет! Я BEK AI — умный помощник созданный Y.Samir.\n\n"
+        "Напиши /help чтобы узнать что я умею!"
+    )
+
+async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🤖 *BEK AI — возможности:*\n\n"
+        "💬 Просто напиши мне — отвечу на любой вопрос\n"
+        "🖼 *фото [описание]* — сгенерирую картинку\n"
+        "📊 *презентация [тема]* — создам презентацию\n\n"
+        "🛠 Поддержка: @Samir_Yl",
+        parse_mode="Markdown"
+    )
 
 async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
@@ -97,5 +113,7 @@ async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     app = Application.builder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
     app.run_polling(drop_pending_updates=True)
