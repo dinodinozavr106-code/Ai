@@ -4,25 +4,23 @@ from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-CLAUDE_KEY = os.environ.get("CLAUDE_KEY")
+GROQ_KEY = os.environ.get("GROQ_KEY")
 
 async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
-    url = "https://api.anthropic.com/v1/messages"
+    url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
-        "x-api-key": CLAUDE_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json"
+        "Authorization": "Bearer " + GROQ_KEY,
+        "Content-Type": "application/json"
     }
     body = {
-        "model": "claude-haiku-4-5-20251001",
-        "max_tokens": 1024,
+        "model": "llama-3.1-8b-instant",
         "messages": [{"role": "user", "content": user_text}]
     }
     r = requests.post(url, headers=headers, json=body)
     data = r.json()
-    if "content" in data:
-        answer = data["content"][0]["text"]
+    if "choices" in data:
+        answer = data["choices"][0]["message"]["content"]
     else:
         answer = str(data)
     await update.message.reply_text(answer)
