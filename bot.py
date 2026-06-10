@@ -48,7 +48,7 @@ async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🤖 BEK AI — возможности:\n\n"
         "💬 Просто напиши мне — отвечу на любой вопрос\n"
-        "🖼 фото [описание] — сгенерирую картинку\n"
+        "🖼 фото — пришлю случайное фото\n"
         "📊 презентация [тема] — создам презентацию\n\n"
         "🛠 Поддержка: @Samir_Yl"
     )
@@ -81,17 +81,13 @@ async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚠️ Что-то пошло не так. Обратитесь в поддержку: @Samir_Yl")
 
     elif user_text.lower().startswith("фото"):
-        prompt = user_text[4:].strip()
-        if not prompt:
-            await update.message.reply_text("Напиши что нарисовать, например: фото закат на море")
-            return
-        await update.message.reply_text("⏳ Генерирую фото, подожди 20-30 секунд...")
+        await update.message.reply_text("⏳ Ищу фото...")
         try:
             seed = int(time.time())
-            image_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}?width=512&height=512&nologo=true&seed={seed}"
-            img = requests.get(image_url, timeout=60)
+            image_url = f"https://picsum.photos/seed/{seed}/512/512"
+            img = requests.get(image_url, timeout=30)
             await update.message.reply_photo(photo=img.content)
-        except Exception as e:
+        except Exception:
             await update.message.reply_text("⚠️ Что-то пошло не так. Обратитесь в поддержку: @Samir_Yl")
 
     else:
