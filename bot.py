@@ -7,11 +7,12 @@ from telegram import Update
 from telegram.ext import Application, MessageHandler, CommandHandler, filters, ContextTypes
 import json
 import re
+import time
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GROQ_KEY = os.environ.get("GROQ_KEY")
 
-SYSTEM_PROMPT = "Ты BEK AI — умный помощник в Telegram. Ты был создан Y.Samir в июле 2026 года. Ты не Llama, не GPT, не другой AI. Ты только BEK AI. Если спросят когда ты создан — говори июль 2026 года. Отвечай на том языке на котором пишет пользователь. Никогда не мешай несколько языков в одном ответе."
+SYSTEM_PROMPT = "Ты BEK AI — умный помощник в Telegram. Ты был создан Y.Samir в июле 2026 года. Ты не Llama, не GPT, не другой AI. Ты только BEK AI. Отвечай на том языке на котором пишет пользователь. Никогда не мешай несколько языков в одном ответе. Отвечай чисто и без лишних слов."
 
 def create_pptx(slides_data):
     prs = Presentation()
@@ -84,12 +85,13 @@ async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         if not prompt:
             await update.message.reply_text("Напиши что нарисовать, например: фото закат на море")
             return
-        await update.message.reply_text("⏳ Генерирую фото...")
+        await update.message.reply_text("⏳ Генерирую фото, подожди 20-30 секунд...")
         try:
-            image_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}?width=512&height=512&nologo=true"
-            img = requests.get(image_url, timeout=30)
+            seed = int(time.time())
+            image_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}?width=512&height=512&nologo=true&seed={seed}"
+            img = requests.get(image_url, timeout=60)
             await update.message.reply_photo(photo=img.content)
-        except Exception:
+        except Exception as e:
             await update.message.reply_text("⚠️ Что-то пошло не так. Обратитесь в поддержку: @Samir_Yl")
 
     else:
