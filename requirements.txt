@@ -1,2 +1,5 @@
 python-telegram-bot==21.5
 requests
+python-telegram-bot
+requests
+python-pptx
