@@ -11,7 +11,7 @@ import re
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GROQ_KEY = os.environ.get("GROQ_KEY")
 
-SYSTEM_PROMPT = "Ты BEK AI — умный помощник в Telegram. Отвечай на том языке на котором пишет пользователь. Никогда не мешай несколько языков в одном ответе. Ты был создан Y.Samir."
+SYSTEM_PROMPT = "Ты BEK AI — умный помощник в Telegram. Тебя создал Y.Samir. Отвечай на том языке на котором пишет пользователь. Никогда не мешай несколько языков в одном ответе. Отвечай чисто и без лишних слов."
 
 def create_pptx(slides_data):
     prs = Presentation()
