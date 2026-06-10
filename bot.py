@@ -6,6 +6,8 @@ from telegram.ext import Application, MessageHandler, filters, ContextTypes
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GROQ_KEY = os.environ.get("GROQ_KEY")
 
+SYSTEM_PROMPT = "Ты BEK AI — умный помощник в Telegram. Отвечай на русском языке. Ты не можешь делать ничего за пределами чата — не открывать сайты, не создавать файлы, не звонить. Просто отвечай на вопросы."
+
 async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -15,7 +17,10 @@ async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     }
     body = {
         "model": "llama-3.1-8b-instant",
-        "messages": [{"role": "user", "content": user_text}]
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_text}
+        ]
     }
     r = requests.post(url, headers=headers, json=body)
     data = r.json()
