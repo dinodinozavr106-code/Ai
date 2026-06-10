@@ -40,7 +40,6 @@ def create_pptx(slides_data):
 async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
 
-    # Презентация
     if user_text.lower().startswith("презентация"):
         topic = user_text[11:].strip() or "тема не указана"
         await update.message.reply_text("⏳ Создаю презентацию...")
@@ -53,27 +52,31 @@ async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         body = {"model": "llama-3.1-8b-instant", "messages": [{"role": "user", "content": prompt}]}
         r = requests.post(url, headers=headers, json=body)
         data = r.json()
-        text = data["choices"][0]["message"]["content"]
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
-            slides_data = json.loads(match.group())["slides"]
-            path = create_pptx(slides_data)
-            await update.message.reply_document(document=open(path, "rb"), filename="presentation.pptx")
-        else:
-            await update.message.reply_text("Не смог создать презентацию, попробуй ещё раз.")
+        try:
+            text = data["choices"][0]["message"]["content"]
+            match = re.search(r'\{.*\}', text, re.DOTALL)
+            if match:
+                slides_data = json.loads(match.group())["slides"]
+                path = create_pptx(slides_data)
+                await update.message.reply_document(document=open(path, "rb"), filename="presentation.pptx")
+            else:
+                await update.message.reply_text("⚠️ Не смог создать презентацию. Обратитесь в поддержку: @Samir_Yl")
+        except Exception:
+            await update.message.reply_text("⚠️ Что-то пошло не так. Обратитесь в поддержку: @Samir_Yl")
 
-    # AI Фото
     elif user_text.lower().startswith("фото"):
         prompt = user_text[4:].strip()
         if not prompt:
             await update.message.reply_text("Напиши что нарисовать, например: фото закат на море")
             return
         await update.message.reply_text("⏳ Генерирую фото...")
-        image_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}?width=512&height=512&nologo=true"
-        img = requests.get(image_url)
-        await update.message.reply_photo(photo=img.content)
+        try:
+            image_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}?width=512&height=512&nologo=true"
+            img = requests.get(image_url, timeout=30)
+            await update.message.reply_photo(photo=img.content)
+        except Exception:
+            await update.message.reply_text("⚠️ Что-то пошло не так. Обратитесь в поддержку: @Samir_Yl")
 
-    # Обычный чат
     else:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {"Authorization": "Bearer " + GROQ_KEY, "Content-Type": "application/json"}
@@ -86,11 +89,11 @@ async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         }
         r = requests.post(url, headers=headers, json=body)
         data = r.json()
-        
-        if "choices" in data:
-    answer = data["choices"][0]["message"]["content"]
-else:
-    answer = "⚠️ Что-то пошло не так. Обратитесь в поддержку: @Samir_Yl"
+        try:
+            answer = data["choices"][0]["message"]["content"]
+        except Exception:
+            answer = "⚠️ Что-то пошло не так. Обратитесь в поддержку: @Samir_Yl"
+        await update.message.reply_text(answer)
 
 if __name__ == "__main__":
     app = Application.builder().token(TELEGRAM_TOKEN).build()
