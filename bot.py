@@ -8,7 +8,7 @@ GEMINI_KEY = os.environ.get("GEMINI_KEY")
 
 async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
+    url = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=" + GEMINI_KEY
     body = {"contents": [{"parts": [{"text": user_text}]}]}
     r = requests.post(url, json=body)
     data = r.json()
@@ -21,4 +21,4 @@ async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-    app.run_polling(drop_pending_updates=True)filters
+    app.run_polling(drop_pending_updates=True)
