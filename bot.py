@@ -12,7 +12,18 @@ import time
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GROQ_KEY = os.environ.get("GROQ_KEY")
 
-SYSTEM_PROMPT = "Ты BEK AI — умный помощник в Telegram. Ты был создан Y.Samir в мае 2026 года. Ты не Llama, не GPT, не другой AI. Ты только BEK AI. Отвечай на том языке на котором пишет пользователь. Никогда не мешай несколько языков в одном ответе. Отвечай чисто и без лишних слов."
+# История чатов для каждого пользователя
+chat_histories = {}
+
+SYSTEM_PROMPT = """Ты BEK AI — умный, дружелюбный помощник в Telegram. Создан Y.Samir в мае 2026 года.
+Ты не Llama, не GPT, не другой AI. Ты только BEK AI.
+Правила:
+- Отвечай ТОЛЬКО на том языке на котором пишет пользователь
+- Никогда не мешай языки в одном ответе
+- Понимай короткие и неформальные сообщения
+- "bye", "bue bue", "пока" = попрощайся тепло
+- Отвечай кратко и по делу
+- Будь дружелюбным и естественным"""
 
 def create_pptx(slides_data):
     prs = Presentation()
@@ -39,6 +50,8 @@ def create_pptx(slides_data):
     return path
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    chat_histories[user_id] = []  # сброс истории
     await update.message.reply_text(
         "👋 Привет! Я BEK AI — умный помощник созданный Y.Samir.\n\n"
         "Напиши /help чтобы узнать что я умею!"
@@ -55,6 +68,11 @@ async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
+    user_id = update.message.from_user.id
+
+    # Инициализация истории
+    if user_id not in chat_histories:
+        chat_histories[user_id] = []
 
     if user_text.lower().startswith("презентация"):
         topic = user_text[11:].strip() or "тема не указана"
@@ -65,7 +83,7 @@ async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 Сделай 10 слайдов."""
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {"Authorization": "Bearer " + GROQ_KEY, "Content-Type": "application/json"}
-        body = {"model": "llama-3.1-8b-instant", "messages": [{"role": "user", "content": prompt}]}
+        body = {"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": prompt}]}
         r = requests.post(url, headers=headers, json=body)
         data = r.json()
         try:
@@ -91,19 +109,25 @@ async def handle(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚠️ Что-то пошло не так. Обратитесь в поддержку: @Samir_Yl")
 
     else:
+        # Добавляем сообщение пользователя в историю
+        chat_histories[user_id].append({"role": "user", "content": user_text})
+        
+        # Оставляем только последние 10 сообщений
+        if len(chat_histories[user_id]) > 10:
+            chat_histories[user_id] = chat_histories[user_id][-10:]
+
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {"Authorization": "Bearer " + GROQ_KEY, "Content-Type": "application/json"}
         body = {
-            "model": "llama-3.1-8b-instant",
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_text}
-            ]
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "system", "content": SYSTEM_PROMPT}] + chat_histories[user_id]
         }
         r = requests.post(url, headers=headers, json=body)
         data = r.json()
         try:
             answer = data["choices"][0]["message"]["content"]
+            # Добавляем ответ бота в историю
+            chat_histories[user_id].append({"role": "assistant", "content": answer})
         except Exception:
             answer = "⚠️ Что-то пошло не так. Обратитесь в поддержку: @Samir_Yl"
         await update.message.reply_text(answer)
